@@ -14,8 +14,9 @@ export async function authenticateUser(req, res, next) {
   }
   const token = authHeader.split(' ')[1];
   try {
-    // Supabase verifies token signature and expiration when using the service role key
-    const { data: supabaseUser, error } = await supabase.auth.api.getUser(token);
+    // Supabase v2 getUser call
+    const { data: authData, error } = await supabase.auth.getUser(token);
+    const supabaseUser = authData?.user;
     if (error || !supabaseUser) {
       return res.status(401).json({ success: false, message: 'Invalid or expired token' });
     }
@@ -55,7 +56,8 @@ export async function optionalAuthentication(req, res, next) {
   }
   const token = authHeader.split(' ')[1];
   try {
-    const { data: supabaseUser, error } = await supabase.auth.api.getUser(token);
+    const { data: authData, error } = await supabase.auth.getUser(token);
+    const supabaseUser = authData?.user;
     if (error || !supabaseUser) {
       req.user = null;
       return next();
