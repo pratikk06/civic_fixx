@@ -1,4 +1,4 @@
-// server/src/controllers/issueController.js
+import mongoose from 'mongoose';
 import Issue from '../models/Issue.js';
 import Department from '../models/Department.js';
 import IssueSupport from '../models/IssueSupport.js';
@@ -189,6 +189,9 @@ export async function getIssues(req, res) {
 /** GET /api/v1/issues/:id */
 export async function getIssueById(req, res) {
   const { issueId } = req.params;
+  if (!issueId || !mongoose.Types.ObjectId.isValid(issueId)) {
+    return res.status(404).json({ success: false, message: 'Issue not found' });
+  }
   const issue = await Issue.findById(issueId)
     .populate('departmentId', 'name slug')
     .lean();
