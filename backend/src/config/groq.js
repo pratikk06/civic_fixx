@@ -1,5 +1,5 @@
 // server/src/config/groq.js
-import fetch from 'node-fetch';
+// Native fetch is globally available in Node.js 18+
 
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 const GROQ_VISION_MODEL = process.env.GROQ_VISION_MODEL || '';
