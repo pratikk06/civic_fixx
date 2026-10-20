@@ -13,63 +13,94 @@ function isValidLng(lng) {
   return typeof lng === 'number' && lng >= -180 && lng <= 180;
 }
 
+const VALID_CATEGORIES = ['pothole', 'garbage', 'broken_streetlight', 'water_leakage', 'damaged_infrastructure', 'other'];
+function normalizeCategory(cat) {
+  if (!cat) return 'other';
+  const c = String(cat).toLowerCase().replace(/[-\s]/g, '_');
+  if (VALID_CATEGORIES.includes(c)) return c;
+  if (c.includes('light')) return 'broken_streetlight';
+  if (c.includes('water') || c.includes('leak')) return 'water_leakage';
+  if (c.includes('road') || c.includes('infra')) return 'damaged_infrastructure';
+  if (c.includes('pothole')) return 'pothole';
+  if (c.includes('garbage') || c.includes('waste')) return 'garbage';
+  return 'other';
+}
+
+const VALID_SEVERITIES = ['low', 'medium', 'high', 'critical'];
+function normalizeSeverity(sev) {
+  if (!sev) return 'medium';
+  const s = String(sev).toLowerCase();
+  return VALID_SEVERITIES.includes(s) ? s : 'medium';
+}
+
 /** POST /api/v1/issues */
 export async function createIssue(req, res) {
-  const {
-    title,
-    userDescription,
-    beforeImagePath,
-    latitude,
-    longitude,
-    address,
-    locality,
-    locationSource,
-    category,
-    severity,
-    isAnonymous = false,
-  } = req.body;
+  const title = req.body.title;
+  const userDescription = req.body.userDescription || req.body.user_description || req.body.description || '';
+  const beforeImagePath = req.body.beforeImagePath || req.body.before_image_path || req.body.imageUrl || req.body.image || null;
+  const latitude = req.body.latitude;
+  const longitude = req.body.longitude;
+  const address = req.body.address;
+  const locality = req.body.locality;
+  const locationSource = req.body.locationSource || req.body.location_source || 'manual';
+  const category = normalizeCategory(req.body.category);
+  const severity = normalizeSeverity(req.body.severity);
+  const isAnonymous = Boolean(req.body.isAnonymous ?? req.body.is_anonymous ?? false);
 
   // Basic required fields validation
-  if (!title || !userDescription || !category || !severity) {
-    return res.status(400).json({ success: false, message: 'Missing required fields' });
+  if (!title) {
+    return res.status(400).json({ success: false, message: 'Missing required field: title' });
   }
 
-  // Image path validation – must start with issue-images/ (uploaded via our upload endpoint)
-  if (beforeImagePath && !/^issue-images\/.+/.test(beforeImagePath)) {
-    return res.status(400).json({ success: false, message: 'Invalid beforeImagePath' });
-  }
-
-  // Optional coordinate validation
+  // Location handling
   let location = undefined;
-  if (latitude !== undefined || longitude !== undefined) {
-    if (!isValidLat(Number(latitude)) || !isValidLng(Number(longitude))) {
-      return res.status(400).json({ success: false, message: 'Invalid latitude/longitude' });
+  if (latitude !== undefined && longitude !== undefined) {
+    if (isValidLat(Number(latitude)) && isValidLng(Number(longitude))) {
+      location = {
+        type: 'Point',
+        coordinates: [Number(longitude), Number(latitude)],
+        address: address || locality || null,
+        locality: locality || null,
+        locationSource,
+      };
     }
-    location = {
-      coordinates: [Number(longitude), Number(latitude)],
-      address: address || null,
-      locality: locality || null,
-      locationSource: locationSource || 'manual',
-    };
   }
 
-  // Authenticated user must be present (middleware guarantees)
-  const userId = req.user.id;
-  const profile = await UserProfile.findOne({ authUserId: userId });
-  if (!profile) {
-    return res.status(404).json({ success: false, message: 'User profile not found' });
+  // Resolve user profile (authenticated user or fallback guest profile)
+  let createdById = null;
+  if (req.user?.id) {
+    let profile = await UserProfile.findOne({ authUserId: req.user.id });
+    if (!profile) {
+      profile = await UserProfile.create({
+        authUserId: req.user.id,
+        displayName: req.user.email || 'Citizen Contributor',
+        role: 'citizen',
+        isPublicProfile: true,
+      });
+    }
+    createdById = profile._id;
+  } else {
+    let guestProfile = await UserProfile.findOne({ authUserId: 'guest-citizen' });
+    if (!guestProfile) {
+      guestProfile = await UserProfile.create({
+        authUserId: 'guest-citizen',
+        displayName: 'Civic Contributor',
+        role: 'citizen',
+        isPublicProfile: true,
+      });
+    }
+    createdById = guestProfile._id;
   }
 
   const issue = new Issue({
     title,
     userDescription,
-    beforeImagePath: beforeImagePath || null,
+    beforeImagePath: typeof beforeImagePath === 'string' ? beforeImagePath : null,
     location,
     category,
     severity,
-    isAnonymous: Boolean(isAnonymous),
-    createdBy: profile._id,
-    // status defaults to 'reported' via schema default
+    isAnonymous,
+    createdBy: createdById,
   });
 
   await issue.save();

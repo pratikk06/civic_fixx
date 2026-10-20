@@ -1,6 +1,6 @@
 // server/src/routes/issues.js
 import express from 'express';
-import { authenticateUser } from '../middleware/auth.js';
+import { authenticateUser, optionalAuthentication } from '../middleware/auth.js';
 import {
   createIssue,
   getIssues,
@@ -22,7 +22,7 @@ router.get('/', getIssues);
 router.get('/trending', getTrendingIssues);
 router.get('/me', authenticateUser, getMyIssues);
 router.get('/:issueId', getIssueById);
-router.post('/', authenticateUser, createIssue);
+router.post('/', optionalAuthentication, createIssue);
 
 // Support endpoints
 router.post('/:issueId/support', authenticateUser, supportIssue);

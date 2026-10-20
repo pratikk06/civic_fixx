@@ -6,6 +6,7 @@ import healthRouter from './routes/health.js';
 import profileRouter from './routes/profile.js';
 import authRouter from './routes/auth.js';
 import issuesRouter from './routes/issues.js';
+import aiRouter from './routes/ai.js';
 import notFoundHandler from './middleware/notFound.js';
 import errorHandler from './middleware/errorHandler.js';
 
@@ -23,6 +24,7 @@ app.use('/api/v1', healthRouter);
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/profile', profileRouter);
 app.use('/api/v1/issues', issuesRouter);
+app.use('/api/v1/ai', aiRouter);
 
 // 404 handler
 app.use(notFoundHandler);
