@@ -21,12 +21,7 @@ export async function connectDB() {
     return cached.conn;
   }
   if (!cached.promise) {
-    const opts = {
-      // Options to avoid deprecation warnings
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    };
-    cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {
+    cached.promise = mongoose.connect(MONGODB_URI).then((mongoose) => {
       console.log('✅ Connected to MongoDB');
       return mongoose;
     });
