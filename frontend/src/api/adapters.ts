@@ -81,10 +81,10 @@ export function adaptBackendIssueToFrontend(item: any): CivicIssue {
     };
   }
 
-  let rawImg = item.before_image_path || item.imageUrl || "";
+  let rawImg = item.imageUrl || item.before_image_path || item.beforeImagePath || item.image?.path || (typeof item.image === "string" ? item.image : "");
   let resolvedImageUrl = rawImg;
 
-  if (!rawImg || (typeof rawImg === "string" && (rawImg.startsWith("issues/") || rawImg.startsWith("resolutions/")))) {
+  if (!rawImg) {
     const categoryLower = String(item.category || "").toLowerCase();
     if (categoryLower.includes("garbage") || categoryLower.includes("waste")) {
       resolvedImageUrl = "https://images.unsplash.com/photo-1611284446314-60a58ac0deb9?w=800&auto=format&fit=crop";
@@ -100,9 +100,9 @@ export function adaptBackendIssueToFrontend(item: any): CivicIssue {
   }
 
   return {
-    id: String(item.id),
+    id: String(item.id || item._id),
     title: item.title || "Civic Issue",
-    description: item.user_description || item.description || "",
+    description: item.userDescription || item.user_description || item.description || "",
     imageUrl: resolvedImageUrl,
     category: cat,
     department: item.department_name || item.department || "Municipal Public Works",
@@ -110,10 +110,10 @@ export function adaptBackendIssueToFrontend(item: any): CivicIssue {
     severity: item.severity || "medium",
     status: st,
     location: {
-      address: item.address || "Reported Location",
-      locality: item.address || "Local District",
-      latitude: item.latitude || 37.7749,
-      longitude: item.longitude || -122.4194,
+      address: item.location?.address || item.address || "Reported Location",
+      locality: item.location?.locality || item.locality || item.address || "Local District",
+      latitude: item.location?.coordinates ? item.location.coordinates[1] : (item.latitude || 37.7749),
+      longitude: item.location?.coordinates ? item.location.coordinates[0] : (item.longitude || -122.4194),
     },
     reporter: {
       id: item.reporter?.id ? String(item.reporter.id) : "anon",
